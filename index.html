@@ -1,0 +1,1019 @@
+<!doctype html>
+<html lang="lo">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ລະບົບຄຸ້ມຄອງ LaoH</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F6F3EC;--surface:#fff;--ink:#22271F;--muted:#6D6A5D;--line:#DDD7C6;--dot:#3A3833;--accentbg:#FAECE7;--accent:#993C1D}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,'Noto Sans Lao','Segoe UI',sans-serif;padding:2rem 1rem 4rem}
+.wrap{max-width:720px;margin:0 auto}
+.card{background:var(--surface);border:0.5px solid var(--line);border-radius:12px;padding:1.25rem;margin-bottom:1rem}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+input{width:100%;border:0.5px solid var(--line);border-radius:8px;padding:10px 12px;font-size:15px;font-family:inherit;background:var(--bg)}
+button{border:0.5px solid var(--line);border-radius:8px;background:var(--surface);padding:9px 16px;font-size:13px;cursor:pointer;margin-top:12px;font-family:inherit}
+button:hover{opacity:.9}
+.tabs{display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap}
+.tab{padding:6px 12px;border:0.5px solid var(--line);border-radius:20px;font-size:12px;cursor:pointer;background:var(--surface)}
+.tab.active{background:var(--dot);color:#fff;border-color:var(--dot)}
+.stat{background:var(--bg);border-radius:8px;padding:10px 12px}
+.stat .n{font-size:20px;font-weight:600}
+.stat .l{font-size:12px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td,th{padding:6px 4px;border-bottom:0.5px solid var(--line);text-align:left}
+.err{color:#A32D2D;font-size:12px;margin-top:6px;min-height:14px}
+.note{font-size:11px;color:var(--accent);background:var(--accentbg);padding:6px 10px;border-radius:6px;margin:0 0 12px;display:inline-block}
+.tree{display:flex;flex-direction:column;align-items:center}
+.node{border:0.5px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer;text-align:center;background:var(--surface)}
+.node .t{font-weight:600;font-size:13px;margin:0}
+.node .s{font-size:11px;color:var(--muted);margin:2px 0 0}
+.connector{width:1px;height:16px;background:var(--line)}
+.dept-row{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;width:100%;position:relative;padding-top:16px;margin-top:-1px}
+.dept-row::before{content:"";position:absolute;top:0;left:8%;right:8%;height:1px;background:var(--line)}
+.col{display:flex;flex-direction:column;align-items:center;width:140px}
+.col .stub{width:1px;height:16px;background:var(--line)}
+.staffwrap{display:flex;flex-direction:column;align-items:center;gap:5px;margin-top:8px;width:100%}
+.chip{border:0.5px solid var(--line);border-radius:6px;padding:5px 8px;font-size:11px;background:var(--surface);cursor:pointer;width:100%;text-align:center}
+.chip.active{border-color:var(--dot);color:var(--dot);font-weight:600}
+.node.active{border-color:var(--dot);border-width:1.5px}
+.board{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.board-head{background:#0F3D2E;color:#fff;padding:14px 16px;font-weight:600;font-size:15px}
+.board-sub{background:#F6F3EC;padding:10px 16px;font-size:12px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+table.plan{width:100%;border-collapse:collapse;table-layout:fixed}
+table.plan th{background:#0F3D2E;color:#fff;font-size:12px;font-weight:600;padding:9px 8px;text-align:left}
+table.plan td{padding:8px;border-bottom:1px solid var(--line);font-size:12px;vertical-align:top;overflow-wrap:break-word}
+table.plan th:nth-child(1),table.plan td:nth-child(1){width:26%}
+table.plan th:nth-child(2),table.plan td:nth-child(2){width:44%}
+table.plan th:nth-child(3),table.plan td:nth-child(3){width:30%}
+table.plan tr:last-child td{border-bottom:none}
+.statusrow{display:flex;flex-direction:column;gap:5px;align-items:flex-start}
+.radio{display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;color:var(--muted)}
+.radio .dot{width:12px;height:12px;border-radius:50%;border:1.5px solid var(--line);display:inline-block}
+.radio.active .dot{background:currentColor;border-color:currentColor}
+.radio.active{font-weight:600}
+.arrow-btn{cursor:pointer;color:var(--muted);font-size:11px;margin-right:4px}
+.update-row td{background:#F6F3EC}
+</style>
+</head>
+<body>
+<div class="wrap" id="root"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script>
+// ===== Firebase config: ໃສ່ຄ່າຈິງຂອງໂປຣເຈັກ laoh-marketplace ຕົງນີ້ =====
+const firebaseConfig = {
+  apiKey: "AIzaSyBnKXjs9u17ypTvu2AAdJZs3EkWYQo0Uyc",
+  authDomain: "laoh-mgmt.firebaseapp.com",
+  projectId: "laoh-mgmt",
+  storageBucket: "laoh-mgmt.firebasestorage.app",
+  messagingSenderId: "627456921975",
+  appId: "1:627456921975:web:c08ec4796cecfbf26a1172"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+let ACCOUNTS = [];
+const ROLE_LABEL = {admin:"ຜູ້ບໍລິຫານ", staff:"ພະນັກງານ"};
+const DEPT_LABEL = {tech:"ຝ່າຍເທັກໂນໂລຊີ", ops:"ຝ່າຍປະຕິບັດການ", fin:"ຝ່າຍການເງິນ", mkt:"ຝ່າຍການຕະຫຼາດ", all:"ທຸກຝ່າຍ"};
+const ORG_DATA = {
+board:{eyebrow:"ບອດ",title:"ເຈົ້າຂອງບໍລິສັດ",role:"Eve + ຄູ່ຮ່ວມທຸລະກິດ",duties:["ກຳນົດທິດທາງທຸລະກິດໄລຍະຍາວ","ອະນຸມັດງົບລົງທຶນກ້ອນໃຫຍ່","ຮັບລາຍງານຜົນປະກອບການ"]},
+ceo:{eyebrow:"ຜູ້ບໍລິຫານສູງສຸດ",title:"CEO",role:"ຄຸ້ມຄອງຫົວໜ້າທຸກຝ່າຍ",duties:["ກຳນົດທິດທາງຄຸນສົມບັດ ແລະ ຍຸດທະສາດ","ຄຸ້ມງົບປະມານລວມ","ຈັດການວິກິດເມື່ອມີບັນຫາໃຫຍ່"]},
+tech:{eyebrow:"ຫົວໜ້າຝ່າຍ",title:"ຝ່າຍເທັກໂນໂລຊີ",role:"CTO",duties:["ຄຸ້ມສະຖາປັດຕະຍະກຳລະບົບ","ອະນຸມັດເວີຊັນກ່ອນຂຶ້ນຈິງ"]},
+dev:{eyebrow:"ພະນັກງານ",title:"ນັກພັດທະນາຊ່ວຍ",role:"ລາຍງານຕໍ່ CTO",duties:["ແກ້ບັນຫາ ແລະ ເຮັດຄຸນສົມບັດນ້ອຍ","ທົດສອບໂຄ້ດຕົນເອງກ່ອນສົ່ງກວດ"]},
+qa:{eyebrow:"ພະນັກງານ",title:"QA / ຜູ້ທົດສອບ",role:"ລາຍງານຕໍ່ CTO",duties:["ທົດສອບຄຸນສົມບັດໃໝ່ກ່ອນຂຶ້ນຈິງ","ບັນທຶກບັນຫາທີ່ພົບ"]},
+ops:{eyebrow:"ຫົວໜ້າຝ່າຍ",title:"ຝ່າຍປະຕິບັດການ",role:"COO",duties:["ຄຸ້ມທຸກຈຸດທີ່ລູກຄ້າສຳຜັດ","ອະນຸມັດຄືນເງິນຂັ້ນສຸດທ້າຍ"]},
+cs:{eyebrow:"ພະນັກງານ",title:"ບໍລິການລູກຄ້າ",role:"ລາຍງານຕໍ່ COO",duties:["ຕອບແຊັດລູກຄ້າພາຍໃນເວລາທີ່ກຳນົດ","ຈັດການບັນຫາອໍເດີເບື້ອງຕົ້ນ"]},
+vendor:{eyebrow:"ພະນັກງານ",title:"ຄວາມສຳພັນຮ້ານຄ້າ",role:"ລາຍງານຕໍ່ COO",duties:["ອະນຸມັດຮ້ານຄ້າໃໝ່","ຝຶກອົບຮົມຮ້ານຄ້າໃໝ່"]},
+rider:{eyebrow:"ພະນັກງານ",title:"ຜູ້ປະສານງານໄຣເດີ",role:"ລາຍງານຕໍ່ COO",duties:["ຈັດສັນງານສົ່ງເຄື່ອງ","ແກ້ບັນຫາໜ້າງານ"]},
+fin:{eyebrow:"ຫົວໜ້າຝ່າຍ",title:"ຝ່າຍການເງິນ",role:"CFO",duties:["ວາງນະໂຍບາຍການເງິນລວມ","ອະນຸມັດຈ່າຍເງິນຈິງຂັ້ນສຸດທ້າຍ"]},
+acct:{eyebrow:"ພະນັກງານ",title:"ພະນັກງານບັນຊີ",role:"ລາຍງານຕໍ່ CFO",duties:["ບັນທຶກລາຍຮັບ-ລາຍຈ່າຍ","ເຮັດງົບກຳໄລຂາດທຶນ"]},
+wd:{eyebrow:"ພະນັກງານ",title:"ກວດສອບການຖອນເງິນ",role:"ລາຍງານຕໍ່ CFO",duties:["ກວດຄຳຂໍຖອນເງິນກ່ອນໂອນຈິງ","ແຍກອຳນາດຈາກຄົນອະນຸມັດ"]},
+mkt:{eyebrow:"ຫົວໜ້າຝ່າຍ",title:"ຝ່າຍການຕະຫຼາດ",role:"CMO",duties:["ວາງແຜນແຄມເປນລວມ","ຄຸ້ມຄອງຄຸນນະພາບເນື້ອຫາ"]},
+content:{eyebrow:"ພະນັກງານ",title:"Social / ເນື້ອຫາ",role:"ລາຍງານຕໍ່ CMO",duties:["ໂພສເນື້ອຫາຢ່າງໜ້ອຍ 1 ຊິ້ນຕໍ່ວັນ","ຕອບຄອມເມັນ"]},
+local:{eyebrow:"ພະນັກງານ",title:"ຜູ້ແປພາສາ",role:"ລາຍງານຕໍ່ CMO",duties:["ກວດຄຳແປ 3 ພາສາ","ຂຽນຄຳໂຄສະນາ"]},
+growth:{eyebrow:"ພະນັກງານ",title:"ຫາຮ້ານຄ້າໃໝ່",role:"ລາຍງານຕໍ່ CMO",duties:["ຫາຮ້ານຄ້າໃໝ່","ຕິດຕໍ່ຮ້ານຄ້າເປົ້າໝາຍ"]}
+};
+const ORG_TREE = [
+  {head:'tech', staff:['dev','qa']},
+  {head:'ops', staff:['cs','vendor','rider']},
+  {head:'fin', staff:['acct','wd']},
+  {head:'mkt', staff:['content','growth','local']}
+];
+let session = null;
+let activeTab = 'orgchart';
+const STATUS_OPTIONS = ['ยังບໍ່ເລີ່ມ','ກຳລັງເຮັດ','ລໍຖ້າອະນຸມັດ','ສຳເລັດ'];
+const STATUS_COLOR = {'ยังບໍ່ເລີ່ມ':'#6D6A5D','ກຳລັງເຮັດ':'#2F5D8C','ລໍຖ້າອະນຸມັດ':'#9C6B22','ສຳເລັດ':'#0F6E56'};
+const DEPT_COLOR = {tech:'#0F6E56', ops:'#4A4B8C', fin:'#854F0B', mkt:'#993C1D'};
+function todayISO(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+let viewingDate = todayISO();
+let calendarMonth = new Date();
+let MOCK_GOALS = {};
+let MOCK_TASKS = [];
+let MOCK_LOGINLOG = [];
+const root = document.getElementById('root');
+
+// ===== ຟັງຊັນເຊື່ອມຕໍ່ Firestore =====
+function hydrateTaskDoc(doc){
+  const d = doc.data();
+  const conv = (arr) => (arr||[]).map(x => ({...x, at: x.at && x.at.toDate ? x.at.toDate() : x.at}));
+  return { id: doc.id, ...d, updates: conv(d.updates), editHistory: conv(d.editHistory) };
+}
+
+// ===== Realtime sync: ຟັງການປ່ຽນແປງງານແບບສົດ ຂ້າມອຸປະກອນ =====
+let tasksUnsubscribe = null;
+let openExpandId = null;
+function subscribeToTasks(){
+  return new Promise((resolve)=>{
+    if(tasksUnsubscribe) tasksUnsubscribe();
+    let gotFirst = false;
+    tasksUnsubscribe = db.collection('mgmt_tasks').onSnapshot(snap=>{
+      MOCK_TASKS = snap.docs.map(hydrateTaskDoc);
+      if(!gotFirst){ gotFirst = true; resolve(); return; }
+      if(!session) return;
+      if(activeTab==='orgchart'){ renderOrgChart(); showOrg(currentOrgId); }
+      else if(activeTab==='tasks'){ loadTasksAdmin(); }
+      else if(adminViewingTasks){ renderTaskSubTabs(); }
+      else if(session.role==='staff'){ rerenderStaffTab(); }
+    }, err=>{ console.error('realtime sync ຜິດພາດ:', err); resolve(); });
+  });
+}
+function unsubscribeTasks(){
+  if(tasksUnsubscribe){ tasksUnsubscribe(); tasksUnsubscribe = null; }
+}
+
+async function loadAllAccountsFromServer(){
+  const snap = await db.collection('mgmt_accounts').get();
+  ACCOUNTS = snap.docs.map(doc => ({ username: doc.id, ...doc.data() }));
+}
+function persistTask(t){
+  const { id, ...data } = t;
+  db.collection('mgmt_tasks').doc(id).set(data).catch(err=>console.error('ບັນທຶກງານບໍ່ສຳເລັດ:', err));
+}
+function persistAccount(a){
+  const { username, ...data } = a;
+  db.collection('mgmt_accounts').doc(username).set(data).catch(err=>console.error('ບັນທຶກບັນຊີບໍ່ສຳເລັດ:', err));
+}
+function persistLoginLog(entry){
+  db.collection('mgmt_loginlog').add(entry).catch(err=>console.error('ບັນທຶກປະຫວັດບໍ່ສຳເລັດ:', err));
+}
+function persistGoal(dept, date, text){
+  db.collection('mgmt_goals').doc(dept+'_'+date).set({department:dept, date:date, text:text}).catch(err=>console.error('ບັນທຶກເປົ້າໝາຍບໍ່ສຳເລັດ:', err));
+}
+async function ensureGoalLoaded(dept, date){
+  const key = dept+'|'+date;
+  if(MOCK_GOALS[key] !== undefined) return;
+  try{
+    const doc = await db.collection('mgmt_goals').doc(dept+'_'+date).get();
+    MOCK_GOALS[key] = doc.exists ? (doc.data().text || '') : '';
+    const input = document.getElementById('dailyGoal');
+    if(input && currentTaskDept===dept && viewingDate===date) input.value = MOCK_GOALS[key];
+  }catch(err){ console.error('ໂຫຼດເປົ້າໝາຍບໍ່ສຳເລັດ:', err); }
+}
+
+// ===== ສ້າງບັນຊີແອດມິນເລີ່ມຕົ້ນອັດຕະໂນມັດ (eve / ActiveCEOEve) ຖ້າຍັງບໍ່ມີ =====
+async function ensureBootstrapAdmin(){
+  try{
+    const doc = await db.collection('mgmt_accounts').doc('eve').get();
+    if(!doc.exists){
+      await db.collection('mgmt_accounts').doc('eve').set({
+        password: 'ActiveCEOEve', name: 'Eve', role: 'admin', department: 'all'
+      });
+    }
+  }catch(err){ console.error('ສ້າງບັນຊີເລີ່ມຕົ້ນບໍ່ສຳເລັດ:', err); }
+}
+function reloadTasksAndRefresh(){
+  if(activeTab==='orgchart'){ renderOrgChart(); showOrg(currentOrgId); }
+  else if(adminViewingTasks){ renderTaskSubTabs(); }
+  else { rerenderStaffTab(); }
+}
+
+function renderLogin(){
+  root.innerHTML = `
+  <div class="card">
+    <label>ຊື່ຜູ້ໃຊ້</label>
+    <input id="u">
+    <label>ລະຫັດຜ່ານ</label>
+    <input id="p" type="password">
+    <button onclick="doLogin()">ເຂົ້າສູ່ລະບົບ</button>
+    <div class="err" id="err"></div>
+  </div>`;
+}
+
+const SESSION_KEY = 'laoh_mgmt_session';
+const SESSION_HOURS = 12;
+function saveSession(s){
+  localStorage.setItem(SESSION_KEY, JSON.stringify({...s, expiresAt: Date.now() + SESSION_HOURS*60*60*1000}));
+}
+function getSession(){
+  const raw = localStorage.getItem(SESSION_KEY);
+  if(!raw) return null;
+  try{
+    const s = JSON.parse(raw);
+    if(Date.now() > s.expiresAt){ localStorage.removeItem(SESSION_KEY); return null; }
+    return s;
+  }catch(e){ localStorage.removeItem(SESSION_KEY); return null; }
+}
+function clearSession(){ localStorage.removeItem(SESSION_KEY); }
+
+async function doLogin(){
+  const u = document.getElementById('u').value.trim();
+  const p = document.getElementById('p').value;
+  const errEl = document.getElementById('err');
+  if(!u || !p){ errEl.textContent = 'ກະລຸນາປ້ອນຊື່ຜູ້ໃຊ້ ແລະ ລະຫັດຜ່ານ'; return; }
+  errEl.textContent = 'ກຳລັງກວດສອບ...';
+  try{
+    const doc = await db.collection('mgmt_accounts').doc(u).get();
+    if(!doc.exists || doc.data().password !== p){
+      errEl.textContent = 'ຊື່ຜູ້ໃຊ້ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ';
+      return;
+    }
+    errEl.textContent = '';
+    const found = { username: u, ...doc.data() };
+    session = found;
+    saveSession(found);
+    activeTab = 'orgchart';
+    persistLoginLog({username:u, action:'login', at:new Date()});
+    await Promise.all([loadAllAccountsFromServer(), subscribeToTasks()]);
+    renderApp();
+  }catch(e){
+    errEl.textContent = 'ເຂົ້າສູ່ລະບົບບໍ່ສຳເລັດ: ' + e.message;
+  }
+}
+function doLogout(){
+  if(session) persistLoginLog({username:session.username, action:'logout', at:new Date()});
+  session = null;
+  clearSession();
+  unsubscribeTasks();
+  if(clockInterval) clearInterval(clockInterval);
+  renderLogin();
+}
+
+let clockInterval = null;
+function startClock(){
+  if(clockInterval) clearInterval(clockInterval);
+  updateClock();
+  clockInterval = setInterval(updateClock, 1000);
+}
+function updateClock(){
+  const el = document.getElementById('digitalClock');
+  if(!el){ clearInterval(clockInterval); return; }
+  const now = new Date();
+  const time = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')+':'+String(now.getSeconds()).padStart(2,'0');
+  const dateStr = DOW_LABEL[now.getDay()]+'. '+now.getDate()+' '+MONTH_LABEL[now.getMonth()]+' '+now.getFullYear();
+  el.innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:15px;letter-spacing:1px">${time}</div><div style="font-size:10px;opacity:.85;margin-top:1px">${dateStr}</div>`;
+}
+
+function renderApp(){
+  const isAdmin = session.role === 'admin';
+  adminViewingTasks = false;
+  let tabsHtml = '';
+  if(isAdmin){
+    const tabs = [['orgchart','ຜັງໜ້າທີ່'],['reports','ລາຍງານ'],['tasks','ມອບໝາຍງານ'],['accounts','ເພີ່ມບັນຊີ'],['loginlog','ປະຫວັດເຂົ້າ-ອອກ']];
+    tabsHtml = '<div class="tabs">' + tabs.map(([k,v])=>`<div class="tab ${activeTab===k?'active':''}" onclick="setTab('${k}')">${v}</div>`).join('') + '</div>';
+  }
+  root.innerHTML = `
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:12px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <img id="logoSlot" src="data:image/png;base64,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" alt="LaoH" style="height:34px;width:auto;flex-shrink:0">
+      <div><strong>${session.name}</strong> <span style="font-size:11px;color:var(--muted)">${ROLE_LABEL[session.role]}${!isAdmin ? ' · '+DEPT_LABEL[session.department] : ''}</span></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div id="digitalClock" style="background:var(--dot);color:#fff;border-radius:10px;padding:6px 14px;text-align:right;line-height:1.25"></div>
+      <button onclick="doLogout()" style="margin:0">ອອກຈາກລະບົບ</button>
+    </div>
+  </div>
+  ${tabsHtml}
+  <div class="card" id="content"></div>`;
+  startClock();
+  if(isAdmin){
+    if(activeTab==='orgchart') renderOrgChart();
+    else if(activeTab==='reports') renderReportsAdmin();
+    else if(activeTab==='tasks') renderTasksAdmin();
+    else if(activeTab==='accounts') renderAccountsAdmin();
+    else if(activeTab==='loginlog') renderLoginLog();
+  } else {
+    renderStaffHome();
+  }
+}
+
+function setTab(k){ activeTab = k; renderApp(); }
+
+function hasPendingTasks(deptKey){
+  return MOCK_TASKS.some(t=>t.department===deptKey && t.status==='ລໍຖ້າອະນຸມັດ');
+}
+function renderOrgChart(){
+  let html = '<div class="tree">'
+    + '<div class="node" onclick="showOrg(\'board\')" id="node-board"><p class="t">ເຈົ້າຂອງບໍລິສັດ</p><p class="s">Eve + ຄູ່ຮ່ວມທຸລະກິດ</p></div>'
+    + '<div class="connector"></div>'
+    + '<div class="node" onclick="showOrg(\'ceo\')" id="node-ceo"><p class="t">CEO</p><p class="s">ຜູ້ບໍລິຫານສູງສຸດ</p></div>'
+    + '<div class="dept-row">';
+  ORG_TREE.forEach(grp=>{
+    const head = ORG_DATA[grp.head];
+    const pending = hasPendingTasks(grp.head);
+    const pendingStyle = pending ? 'border-color:#9C6B22;border-width:2px;background:#FAECE7' : '';
+    html += '<div class="col"><div class="stub"></div>'
+      + '<div class="node" onclick="showOrg(\''+grp.head+'\')" id="node-'+grp.head+'" style="'+pendingStyle+'">'
+      + (pending ? '<span style="float:right;font-size:12px">⏳</span>' : '')
+      + '<p class="t">'+head.title+'</p><p class="s">'+head.role+'</p></div>'
+      + '<div class="staffwrap">'
+      + grp.staff.map(sid=>'<div class="chip" onclick="showOrg(\''+sid+'\')" id="node-'+sid+'">'+ORG_DATA[sid].title+'</div>').join('')
+      + '</div></div>';
+  });
+  html += '</div></div><div id="orgDetail" style="margin-top:16px;border-top:0.5px solid var(--line);padding-top:12px"></div>';
+  document.getElementById('content').innerHTML = html;
+  showOrg('board');
+}
+let currentOrgId = 'board';
+function showOrg(id){
+  currentOrgId = id;
+  document.querySelectorAll('[id^="node-"]').forEach(c=>c.classList.remove('active'));
+  const el = document.getElementById('node-'+id);
+  if(el) el.classList.add('active');
+  const d = ORG_DATA[id];
+  let pendingHtml = '';
+  if(DEPT_LABEL[id]){
+    const pending = MOCK_TASKS.filter(t=>t.department===id && t.status==='ລໍຖ້າອະນຸມັດ');
+    if(pending.length>0){
+      pendingHtml = '<div style="margin-top:16px;padding-top:14px;border-top:1px dashed #9C6B22">'
+        + '<div style="font-size:12px;color:#9C6B22;font-weight:600;margin-bottom:8px">⏳ ງານທີ່ລໍຖ້າການອະນຸມັດ ('+pending.length+')</div>'
+        + pending.map(t=>renderPendingTaskBlock(t)).join('')
+        + '</div>';
+    }
+  }
+  document.getElementById('orgDetail').innerHTML = `
+    <p style="font-size:11px;color:var(--muted);text-transform:uppercase;margin:0 0 2px">${d.eyebrow}</p>
+    <h3 style="margin:0 0 2px;font-size:16px">${d.title}</h3>
+    <p style="font-size:13px;color:var(--muted);margin:0 0 8px">${d.role}</p>
+    <ul style="margin:0;padding-left:18px;font-size:14px">${d.duties.map(x=>'<li style="margin-bottom:4px">'+x+'</li>').join('')}</ul>
+    ${pendingHtml}`;
+}
+
+function renderPendingTaskBlock(t){
+  return `<div style="background:var(--bg);border-radius:8px;padding:10px 12px;margin-bottom:10px">
+    <strong style="font-size:13px">${escapeHtml(t.title)}</strong>
+    ${t.description ? '<div style="font-size:12px;color:var(--muted);margin-top:2px">'+escapeHtml(t.description)+'</div>' : ''}
+    <div style="font-size:10px;color:var(--muted);margin-top:4px">ສະເໜີໂດຍ ${escapeHtml(t.assignedBy)}</div>
+    <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto">
+      ${t.updates.length===0 ? '<div style="font-size:12px;color:var(--muted)">ຍັງບໍ່ມີການອັບເດດ</div>' : t.updates.map(u=>`
+        <div style="background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 10px">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:2px">${escapeHtml(u.author)} · ${fmtDate(u.at)}</div>
+          <div style="font-size:12px">${escapeHtml(u.text)}</div>
+        </div>`).join('')}
+    </div>
+    <div style="display:flex;gap:6px;margin-top:8px">
+      <input id="orginput-${t.id}" placeholder="ພິມຄຳຕອບກັບ...">
+      <button onclick="orgAddTaskMessage('${t.id}')" style="margin:0;white-space:nowrap">ຕອບກັບ</button>
+    </div>
+    <div class="statusrow" style="flex-direction:row;flex-wrap:wrap;gap:8px;margin-top:10px">
+      ${STATUS_OPTIONS.map(s=>`<span class="radio ${t.status===s?'active':''}" style="color:${STATUS_COLOR[s]}" onclick="orgSetTaskStatus('${t.id}','${s}')"><span class="dot"></span>${s}</span>`).join('')}
+    </div>
+    <button onclick="orgSetTaskStatus('${t.id}','ยังບໍ່ເລີ່ມ')" style="margin-top:8px;background:#0F6E56;color:#fff;border-color:#0F6E56">✓ ອະນຸມັດ</button>
+  </div>`;
+}
+function orgAddTaskMessage(id){
+  const input = document.getElementById('orginput-'+id);
+  const text = input.value.trim();
+  if(!text) return;
+  const t = MOCK_TASKS.find(x=>x.id===id);
+  t.updates.push({author: session.name, at: new Date(), text: text});
+  persistTask(t);
+  renderOrgChart();
+  showOrg(currentOrgId);
+}
+function orgSetTaskStatus(id, status){
+  const t = MOCK_TASKS.find(x=>x.id===id);
+  t.status = status;
+  persistTask(t);
+  renderOrgChart();
+  showOrg(currentOrgId);
+}
+
+function escapeHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtDate(d){ return d.toLocaleString('lo-LA', {dateStyle:'medium', timeStyle:'short'}); }
+
+// ===== ແທັບ: ລາຍງານ (ແອດມິນ) — ໃຊ້ລະບົບຕາຕະລາງງານແບບດຽວກັບພະນັກງານ =====
+function renderReportsAdmin(){
+  adminViewingTasks = true;
+  if(!currentTaskDept) currentTaskDept = 'all';
+  if(!staffTab) staffTab = 'daily';
+  const deptKeys = ['all', ...Object.keys(DEPT_LABEL).filter(k=>k!=='all')];
+  const deptChips = deptKeys.map(k=>{
+    const label = k==='all' ? 'ທຸກຝ່າຍ' : DEPT_LABEL[k];
+    const active = currentTaskDept===k;
+    let style = '';
+    if(k!=='all') style = active ? `background:${DEPT_COLOR[k]};border-color:${DEPT_COLOR[k]}` : `color:${DEPT_COLOR[k]};border-color:${DEPT_COLOR[k]}`;
+    return `<div class="tab ${active?'active':''}" style="${style}" onclick="setTaskDeptView('${k}')">${label}</div>`;
+  }).join('');
+  document.getElementById('content').innerHTML = `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:6px">
+      <span onclick="reloadTasksAndRefresh()" style="font-size:11px;color:var(--dot);cursor:pointer">⟳ ໂຫຼດຂໍ້ມູນລ່າສຸດ</span>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">
+      <button onclick="exportSnapshot()" style="margin:0">⬇️ ດາວໂຫຼດງານທັງໝົດ (ຂໍ້ມູນປັດຈຸບັນ)</button>
+      <button onclick="exportBlankTemplate()" style="margin:0">⬇️ ດາວໂຫຼດຟອມເປົ່າ (ສຳລັບເພີ່ມງານໃໝ່)</button>
+      <button onclick="document.getElementById('excelUploadInput').click()" style="margin:0">⬆️ ອັບໂຫລດງານໃໝ່</button>
+      <input type="file" id="excelUploadInput" accept=".xlsx,.xls" style="display:none" onchange="handleExcelUpload(event)">
+    </div>
+    <div class="tabs" style="margin-top:10px">${deptChips}</div>
+    <div class="tabs" id="taskSubTabs"></div>
+    <div id="staffTabBody"></div>`;
+  renderTaskSubTabs();
+}
+function setTaskDeptView(dept){
+  currentTaskDept = dept;
+  renderReportsAdmin();
+}
+
+// ===== Excel: ດາວໂຫຼດງານທັງໝົດ (ອ່ານຢ່າງດຽວ ບໍ່ໃຊ້ອັບໂຫລດກັບຄືນ) =====
+function exportSnapshot(){
+  const wb = XLSX.utils.book_new();
+  Object.keys(DEPT_LABEL).filter(k=>k!=='all').forEach(dept=>{
+    const rows = MOCK_TASKS.filter(t=>t.department===dept).map(t=>({
+      'ຫົວຂໍ້ງານ': t.title,
+      'ລາຍລະອຽດ': t.description,
+      'ກຳນົດສົ່ງ': t.dueDate,
+      'ສະຖານະ': t.status,
+      'ຜູ້ຮັບຜິດຊອບ': assigneeName(t.assignee),
+      'ມອບໝາຍໂດຍ': t.by==='ຫົວໜ້າ' ? 'ຫົວໜ້າ' : 'ພະນັກງານ (ເພີ່ມເອງ)',
+      'ຈຳນວນອັບເດດ': t.updates.length
+    }));
+    if(rows.length===0){
+      rows.push({'ຫົວຂໍ້ງານ':'(ບໍ່ມີງານ)','ລາຍລະອຽດ':'','ກຳນົດສົ່ງ':'','ສະຖານະ':'','ຜູ້ຮັບຜິດຊອບ':'','ມອບໝາຍໂດຍ':'','ຈຳນວນອັບເດດ':''});
+    }
+    const ws = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, DEPT_LABEL[dept]);
+  });
+  const info = [
+    {'ໝາຍເຫດ':'ໄຟລ໌ນີ້ແມ່ນຂໍ້ມູນປັດຈຸບັນສຳລັບເບິ່ງ/ເກັບໄວ້ເທົ່ານັ້ນ'},
+    {'ໝາຍເຫດ':'ຫ້າມອັບໂຫລດໄຟລ໌ນີ້ກັບຄືນເຂົ້າເວັບ ຈະເຮັດໃຫ້ງານຊ້ຳກັນ'},
+    {'ໝາຍເຫດ':'ຖ້າຈະເພີ່ມງານໃໝ່ ໃຫ້ໃຊ້ປຸ່ມ "ດາວໂຫຼດຟອມເປົ່າ" ແທນ'},
+    {'ໝາຍເຫດ':'ຖ້າຈະແກ້ໄຂງານທີ່ມີຢູ່ແລ້ວ ໃຫ້ແກ້ໄຂຜ່ານໜ້າເວັບໂດຍກົງ'}
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(info), 'ໝາຍເຫດ');
+  XLSX.writeFile(wb, 'LaoH_ຂໍ້ມູນປັດຈຸບັນ_'+todayISO()+'.xlsx');
+}
+
+// ===== Excel: ດາວໂຫຼດຟອມເປົ່າ ສຳລັບເພີ່ມງານໃໝ່ =====
+function exportBlankTemplate(){
+  const wb = XLSX.utils.book_new();
+  Object.keys(DEPT_LABEL).filter(k=>k!=='all').forEach(dept=>{
+    const emptyRow = {'ຫົວຂໍ້ງານ':'','ລາຍລະອຽດ':'','ກຳນົດສົ່ງ (YYYY-MM-DD)':'','ສະຖານະ':'','ຜູ້ຮັບຜິດຊອບ (username)':''};
+    const ws = XLSX.utils.json_to_sheet([emptyRow]);
+    XLSX.utils.book_append_sheet(wb, ws, DEPT_LABEL[dept]);
+  });
+  const info = [
+    {'ຄຳແນະນຳການໃຊ້ງານ':'ແຕ່ລະ Sheet ຄືແຕ່ລະຝ່າຍ (ຊື່ Sheet = ຊື່ຝ່າຍ) ເພີ່ມແຖວໃໝ່ໃນ Sheet ຝ່າຍທີ່ຕ້ອງການ'},
+    {'ຄຳແນະນຳການໃຊ້ງານ':'ຟອມນີ້ໃຊ້ສຳລັບ "ເພີ່ມງານໃໝ່" ເທົ່ານັ້ນ ບໍ່ກະທົບງານເກົ່າທີ່ມີຢູ່ໃນເວັບ'},
+    {'ຄຳແນະນຳການໃຊ້ງານ':'ສະຖານະ (ຖ້າໃສ່) ຕ້ອງພິມໃຫ້ຕົງກັບໜຶ່ງໃນນີ້ເທົ່ານັ້ນ: '+STATUS_OPTIONS.join(' / ')+' — ຖ້າປະວ່າງ ຈະໃຊ້ "'+STATUS_OPTIONS[0]+'" ໂດຍອັດຕະໂນມັດ'},
+    {'ຄຳແນະນຳການໃຊ້ງານ':'ວັນທີກຳນົດສົ່ງ ຮູບແບບ YYYY-MM-DD ເຊັ່ນ 2026-08-20 — ຖ້າປະວ່າງ ຈະໃຊ້ວັນທີມື້ນີ້'},
+    {'ຄຳແນະນຳການໃຊ້ງານ':'ຜູ້ຮັບຜິດຊອບໃສ່ username ຂອງພະນັກງານ (ຖ້າບໍ່ແນ່ໃຈ ປະໄວ້ວ່າງໄດ້)'},
+    {'ຄຳແນະນຳການໃຊ້ງານ':'ແກ້ໄຂແລ້ວບັນທຶກ ແລ້ວກັບມາກົດ "ອັບໂຫລດງານໃໝ່" ໃນເວັບ'}
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(info), 'ຄຳແນະນຳ');
+  XLSX.writeFile(wb, 'LaoH_ຟອມເພີ່ມງານໃໝ່.xlsx');
+}
+
+// ===== Excel: ອັບໂຫລດ — ເພີ່ມງານໃໝ່ເທົ່ານັ້ນ ບໍ່ແກ້ໄຂງານເກົ່າ =====
+function handleExcelUpload(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt){
+    try{
+      const data = new Uint8Array(evt.target.result);
+      const wb = XLSX.read(data, {type:'array'});
+      let added=0;
+      Object.keys(DEPT_LABEL).filter(k=>k!=='all').forEach(dept=>{
+        const sheetName = DEPT_LABEL[dept];
+        const ws = wb.Sheets[sheetName];
+        if(!ws) return;
+        const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+        rows.forEach(r=>{
+          const title = String(r['ຫົວຂໍ້ງານ']||'').trim();
+          if(!title) return;
+          const description = String(r['ລາຍລະອຽດ']||'').trim();
+          const dueDateRaw = String(r['ກຳນົດສົ່ງ (YYYY-MM-DD)']||'').trim();
+          const dueDate = dueDateRaw || todayISO();
+          let status = String(r['ສະຖານະ']||'').trim();
+          if(!STATUS_OPTIONS.includes(status)) status = STATUS_OPTIONS[0];
+          let assignee = String(r['ຜູ້ຮັບຜິດຊອບ (username)']||'').trim();
+          if(assignee && !ACCOUNTS.find(a=>a.username===assignee)) assignee = '';
+          const newTask = {
+            id: 't'+Date.now()+Math.random().toString(36).slice(2,6),
+            department: dept, title, description, dueDate, status,
+            updates: [], editHistory: [], assignee: assignee,
+            assignedBy: session.username, by:'ຫົວໜ້າ'
+          };
+          MOCK_TASKS.unshift(newTask);
+          persistTask(newTask);
+          added++;
+        });
+      });
+      alert(added>0 ? 'ອັບໂຫລດສຳເລັດ: ເພີ່ມງານໃໝ່ '+added+' ລາຍການ (ງານເກົ່າບໍ່ຖືກແກ້ໄຂ)' : 'ບໍ່ພົບແຖວທີ່ມີຫົວຂໍ້ງານ ລອງກວດຟອມອີກຄັ້ງ');
+    }catch(err){
+      alert('ອ່ານໄຟລ໌ບໍ່ສຳເລັດ: ' + err.message);
+    }
+    e.target.value = '';
+    renderReportsAdmin();
+  };
+  reader.readAsArrayBuffer(file);
+}
+function renderTaskSubTabs(){
+  const tabs = [['daily','ປະຈຳວັນ'],['weekly','ປະຈຳອາທິດ'],['monthly','ປະຈຳເດືອນ'],['all','ທັງໝົດ']];
+  document.getElementById('taskSubTabs').innerHTML = tabs.map(([k,v])=>`<div class="tab ${staffTab===k?'active':''}" onclick="setStaffTab('${k}')">${v}</div>`).join('');
+  if(staffTab==='daily') renderStaffDaily();
+  else if(staffTab==='weekly') renderStaffWeekly();
+  else if(staffTab==='monthly') renderStaffCalendar();
+  else renderStaffAllTab();
+}
+
+// ===== ແທັບ: ມອບໝາຍງານ (ແອດມິນ) =====
+function assigneeOptions(dept){
+  const list = ACCOUNTS.filter(a=>a.department===dept);
+  if(list.length===0) return '<option value="">(ยังบ่มีพนักงานฝ่ายนี้)</option>';
+  return list.map(a=>`<option value="${a.username}">${escapeHtml(a.name)}</option>`).join('');
+}
+function updateTaskAssigneeOptions(){
+  document.getElementById('taskAssignee').innerHTML = assigneeOptions(document.getElementById('taskDept').value);
+}
+function renderTasksAdmin(){
+  const deptOptions = Object.entries(DEPT_LABEL).filter(([k])=>k!=='all').map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
+  const firstDept = Object.keys(DEPT_LABEL).filter(k=>k!=='all')[0];
+  document.getElementById('content').innerHTML = `
+    <label>ຝ່າຍ</label><select id="taskDept" onchange="updateTaskAssigneeOptions()">${deptOptions}</select>
+    <label>ຫົວຂໍ້ງານ</label><input id="taskTitle">
+    <label>ລາຍລະອຽດ</label><input id="taskDesc">
+    <label>ກຳນົດສົ່ງ</label><input type="date" id="taskDue">
+    <label>ຜູ້ຮັບຜິດຊອບ</label><select id="taskAssignee">${assigneeOptions(firstDept)}</select>
+    <button onclick="submitTask()">ມອບໝາຍງານ</button>
+    <div class="err" id="taskMsg"></div>
+    <div id="taskListAdmin" style="margin-top:16px"></div>`;
+  loadTasksAdmin();
+}
+function submitTask(){
+  const title = document.getElementById('taskTitle').value.trim();
+  const msgEl = document.getElementById('taskMsg');
+  if(!title){ msgEl.textContent = 'ປ້ອນຫົວຂໍ້ງານກ່ອນ'; return; }
+  const newTask = {
+    id: 't'+Date.now(),
+    department: document.getElementById('taskDept').value,
+    title: title,
+    description: document.getElementById('taskDesc').value.trim(),
+    dueDate: document.getElementById('taskDue').value || todayISO(),
+    status: 'ยังບໍ່ເລີ່ມ', updates:[], editHistory:[],
+    assignee: document.getElementById('taskAssignee').value,
+    assignedBy: session.username, by:'ຫົວໜ້າ'
+  };
+  MOCK_TASKS.unshift(newTask);
+  persistTask(newTask);
+  msgEl.style.color = '#0F6E56';
+  msgEl.textContent = 'ມອບໝາຍງານແລ້ວ';
+  document.getElementById('taskTitle').value='';
+  document.getElementById('taskDesc').value='';
+  document.getElementById('taskDue').value='';
+  loadTasksAdmin();
+}
+function loadTasksAdmin(){
+  const el = document.getElementById('taskListAdmin');
+  if(MOCK_TASKS.length===0){ el.innerHTML = '<p style="color:var(--muted);text-align:center;padding:1rem 0">ຍັງບໍ່ມີງານທີ່ມອບໝາຍ</p>'; return; }
+  el.innerHTML = MOCK_TASKS.map(d=>`
+    <div style="border-top:0.5px solid var(--line);padding:10px 0;font-size:13px">
+      <div style="color:var(--muted);font-size:12px;margin-bottom:3px">${DEPT_LABEL[d.department]} · <span style="color:${STATUS_COLOR[d.status]||'var(--muted)'}">${d.status}</span>${d.dueDate?' · ກຳນົດ '+d.dueDate:''}</div>
+      <strong>${escapeHtml(d.title)}</strong>
+      ${d.description ? '<div style="margin-top:2px">'+escapeHtml(d.description)+'</div>' : ''}
+      ${d.updates && d.updates.length>0 ? '<div style="color:var(--muted);margin-top:2px">ອັບເດດລ່າສຸດ: '+escapeHtml(d.updates[d.updates.length-1].text)+' ('+escapeHtml(d.updates[d.updates.length-1].author)+')</div>' : ''}
+    </div>`).join('');
+}
+
+// ===== ແທັບ: ເພີ່ມບັນຊີ (ແອດມິນ) =====
+function renderAccountsAdmin(){
+  const deptOptions = Object.entries(DEPT_LABEL).filter(([k])=>k!=='all').map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
+  document.getElementById('content').innerHTML = `
+    <label>ຊື່ຜູ້ໃຊ້</label><input id="accUsername">
+    <label>ລະຫັດຜ່ານ</label><input id="accPassword">
+    <label>ຊື່-ນາມສະກຸນ</label><input id="accName">
+    <label>ຕຳແໜ່ງ</label><select id="accRole"><option value="staff">ພະນັກງານ</option><option value="admin">ຜູ້ບໍລິຫານ</option></select>
+    <label>ຝ່າຍ</label><select id="accDept">${deptOptions}</select>
+    <button onclick="submitAccount()">ສ້າງບັນຊີ</button>
+    <div class="err" id="accMsg"></div>
+    <div id="accountListAdmin" style="margin-top:16px"></div>`;
+  loadAccountsAdmin();
+}
+function submitAccount(){
+  const username = document.getElementById('accUsername').value.trim();
+  const password = document.getElementById('accPassword').value;
+  const name = document.getElementById('accName').value.trim();
+  const msgEl = document.getElementById('accMsg');
+  if(!username || !password || !name){ msgEl.textContent = 'ປ້ອນຂໍ້ມູນໃຫ້ຄົບ'; return; }
+  if(ACCOUNTS.find(a=>a.username===username)){ msgEl.textContent = 'ຊື່ຜູ້ໃຊ້ນີ້ມີແລ້ວ'; return; }
+  const role = document.getElementById('accRole').value;
+  const newAccount = {username, password, name, role, department: role==='admin' ? 'all' : document.getElementById('accDept').value};
+  ACCOUNTS.push(newAccount);
+  persistAccount(newAccount);
+  msgEl.style.color = '#0F6E56';
+  msgEl.textContent = 'ສ້າງບັນຊີ "'+username+'" ແລ້ວ';
+  document.getElementById('accUsername').value='';
+  document.getElementById('accPassword').value='';
+  document.getElementById('accName').value='';
+  loadAccountsAdmin();
+}
+function loadAccountsAdmin(){
+  const el = document.getElementById('accountListAdmin');
+  const rows = ACCOUNTS.map(d=>`<tr><td>${escapeHtml(d.username)}</td><td>${escapeHtml(d.name)}</td><td>${ROLE_LABEL[d.role]}</td><td>${DEPT_LABEL[d.department]}</td></tr>`).join('');
+  el.innerHTML = `<table><thead><tr><th>ຊື່ຜູ້ໃຊ້</th><th>ຊື່</th><th>ຕຳແໜ່ງ</th><th>ຝ່າຍ</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+// ===== ແທັບ: ປະຫວັດເຂົ້າ-ອອກ (ແອດມິນ) =====
+async function renderLoginLog(){
+  const el = document.getElementById('content');
+  el.innerHTML = '<p style="color:var(--muted)">ກຳລັງໂຫຼດ...</p>';
+  try{
+    const snap = await db.collection('mgmt_loginlog').orderBy('at','desc').limit(100).get();
+    if(snap.empty){ el.innerHTML = '<p style="color:var(--muted);text-align:center;padding:1rem 0">ຍັງບໍ່ມີປະຫວັດ</p>'; return; }
+    const rows = snap.docs.map(doc=>{
+      const d = doc.data();
+      const at = d.at && d.at.toDate ? d.at.toDate() : new Date(d.at);
+      return `<tr><td>${escapeHtml(d.username)}</td><td>${d.action==='login'?'ເຂົ້າສູ່ລະບົບ':'ອອກຈາກລະບົບ'}</td><td>${fmtDate(at)}</td></tr>`;
+    }).join('');
+    el.innerHTML = `<table><thead><tr><th>ຜູ້ໃຊ້</th><th>ການກະທຳ</th><th>ເວລາ</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }catch(e){
+    el.innerHTML = '<p class="err">ໂຫຼດບໍ່ສຳເລັດ: '+e.message+'</p>';
+  }
+}
+
+// ===== ໜ້າພະນັກງານ: ແຜນວຽກປະຈຳວັນ + ປະຕິທິນ =====
+const DOW_LABEL = ['ອາ','ຈ','ອ','ພ','ພຫ','ສຸ','ສ'];
+const MONTH_LABEL = ['ມັງກອນ','ກຸມພາ','ມີນາ','ເມສາ','ພຶດສະພາ','ມິຖຸນາ','ກໍລະກົດ','ສິງຫາ','ກັນຍາ','ຕຸລາ','ພະຈິກ','ທັນວາ'];
+let staffTab = 'daily';
+let currentTaskDept = null;
+let adminViewingTasks = false;
+
+function renderStaffHome(){
+  currentTaskDept = session.department;
+  staffTab = 'daily';
+  viewingDate = todayISO();
+  renderStaffContent();
+}
+function setStaffTab(tab){
+  staffTab = tab;
+  if(adminViewingTasks) renderTaskSubTabs(); else renderStaffContent();
+}
+function goToDate(dateStr){
+  viewingDate = dateStr;
+  staffTab = 'daily';
+  if(adminViewingTasks) renderTaskSubTabs(); else renderStaffContent();
+}
+function renderStaffContent(){
+  const tabs = [['daily','ປະຈຳວັນ'],['weekly','ປະຈຳອາທິດ'],['monthly','ປະຈຳເດືອນ'],['all','ທັງໝົດ']];
+  const tabsHtml = '<div class="tabs">' + tabs.map(([k,v])=>`<div class="tab ${staffTab===k?'active':''}" onclick="setStaffTab('${k}')">${v}</div>`).join('') + '</div>';
+  document.getElementById('content').innerHTML = `<div style="display:flex;justify-content:flex-end;margin-bottom:6px"><span onclick="reloadTasksAndRefresh()" style="font-size:11px;color:var(--dot);cursor:pointer">⟳ ໂຫຼດຂໍ້ມູນລ່າສຸດ</span></div>${tabsHtml}<div id="staffTabBody"></div>`;
+  if(staffTab==='daily') renderStaffDaily();
+  else if(staffTab==='weekly') renderStaffWeekly();
+  else if(staffTab==='monthly') renderStaffCalendar();
+  else renderStaffAllTab();
+}
+
+function fmtDateLao(dateStr){
+  const d = new Date(dateStr+'T00:00:00');
+  return DOW_LABEL[d.getDay()]+'. '+d.getDate()+' '+MONTH_LABEL[d.getMonth()]+' '+d.getFullYear();
+}
+function getWeekRange(dateStr){
+  const d = new Date(dateStr+'T00:00:00');
+  const day = d.getDay();
+  const diffToMon = (day===0 ? -6 : 1-day);
+  const monday = new Date(d); monday.setDate(d.getDate()+diffToMon);
+  const sunday = new Date(monday); sunday.setDate(monday.getDate()+6);
+  const toISO = x => x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');
+  return [toISO(monday), toISO(sunday)];
+}
+
+function chatMessageBlock(t, i, u){
+  const hasHist = u.editHistory && u.editHistory.length>0;
+  return `<div style="background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
+      <span style="font-size:10px;color:var(--muted)">${escapeHtml(u.author)} · ${fmtDate(u.at)}${hasHist?' <span style="color:#9C6B22">(ແກ້ໄຂແລ້ວ)</span>':''}</span>
+      <span style="display:flex;gap:8px">
+        ${hasHist?'<span style="font-size:10px;color:var(--dot);cursor:pointer" onclick="toggleMsgHistory(\''+t.id+'\','+i+')">ປະຫວັດ</span>':''}
+        <span style="font-size:10px;color:var(--dot);cursor:pointer" onclick="toggleMsgEdit('${t.id}',${i})">✎</span>
+      </span>
+    </div>
+    <div id="msgtext-${t.id}-${i}" style="font-size:12px">${escapeHtml(u.text)}</div>
+    <div id="msgedit-${t.id}-${i}" style="display:none;margin-top:6px">
+      <input id="msgeditinput-${t.id}-${i}" value="${escapeHtml(u.text)}">
+      <button onclick="saveMsgEdit('${t.id}',${i})" style="margin-top:6px">ບັນທຶກ</button>
+    </div>
+    ${hasHist?`<div id="msghist-${t.id}-${i}" style="display:none;margin-top:6px;font-size:10px;color:var(--muted);border-top:0.5px solid var(--line);padding-top:6px">
+      ${u.editHistory.map(h=>'<div style="margin-bottom:3px">ຂໍ້ຄວາມເກົ່າ: "'+escapeHtml(h.text)+'" · '+fmtDate(h.at)+'</div>').join('')}
+    </div>`:''}
+  </div>`;
+}
+
+function taskExpandRow(t, colspan){
+  return `<tr class="update-row" id="expand-${t.id}" style="display:none">
+    <td colspan="${colspan}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin:2px 0 8px">
+        <span style="font-size:11px;color:var(--muted)">ອັບເດດວຽກ (ຮຽງລຳດັບເກົ່າ→ໃໝ່)</span>
+        <span style="font-size:11px;color:var(--dot);cursor:pointer" onclick="toggleEditForm('${t.id}')">✎ ແກ້ໄຂຫົວຂໍ້/ລາຍລະອຽດ</span>
+      </div>
+      <div id="editform-${t.id}" style="display:none;background:var(--bg);border-radius:8px;padding:10px;margin-bottom:10px">
+        <label style="margin-top:0">ຫົວຂໍ້ງານ</label><input id="editTitle-${t.id}" value="${escapeHtml(t.title)}">
+        <label>ລາຍລະອຽດ</label><input id="editDesc-${t.id}" value="${escapeHtml(t.description)}">
+        <button onclick="saveTaskEdit('${t.id}')" style="margin-top:8px">ບັນທຶກການແກ້ໄຂ</button>
+      </div>
+      ${t.editHistory && t.editHistory.length>0 ? '<div style="margin-bottom:10px">' + t.editHistory.map(h=>`
+        <div style="font-size:11px;color:#9C6B22;background:#FAECE7;border-radius:6px;padding:5px 8px;margin-bottom:4px">✎ ${escapeHtml(h.author)} · ${fmtDate(h.at)} — ${escapeHtml(h.change)}</div>
+      `).join('') + '</div>' : ''}
+      <div id="chat-${t.id}" style="display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto;margin-bottom:10px">
+        ${t.updates.length===0 ? '<div style="font-size:12px;color:var(--muted)">ຍັງບໍ່ມີການອັບເດດ</div>' : t.updates.map((u,i)=>chatMessageBlock(t,i,u)).join('')}
+      </div>
+      <div style="display:flex;gap:6px">
+        <input id="chatinput-${t.id}" placeholder="ພິມຂໍ້ຄວາມອັບເດດ..." style="flex:1">
+        <button onclick="addTaskMessage('${t.id}')" style="margin:0;white-space:nowrap">ສົ່ງ</button>
+      </div>
+    </td>
+  </tr>`;
+}
+
+function renderStaffDaily(){
+  const list = MOCK_TASKS.filter(t=>(currentTaskDept==='all' || t.department===currentTaskDept) && t.dueDate===viewingDate);
+  const goal = MOCK_GOALS[currentTaskDept+'|'+viewingDate] || '';
+  if(currentTaskDept!=='all') ensureGoalLoaded(currentTaskDept, viewingDate);
+  const d = new Date(viewingDate+'T00:00:00');
+
+  const bodyRows = list.length===0
+    ? '<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px">ບໍ່ມີວຽກໃນວັນນີ້</td></tr>'
+    : list.map(t=>`
+      <tr>
+        <td><span class="arrow-btn" id="arrow-${t.id}" onclick="toggleTaskRow('${t.id}')">▸</span>${currentTaskDept==='all'?'<span style="font-size:9px;color:'+DEPT_COLOR[t.department]+';font-weight:600">'+DEPT_LABEL[t.department]+'</span><br>':''}<strong>${escapeHtml(t.title)}</strong>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px">${t.by==='ຫົວໜ້າ'?'ມອບໝາຍໂດຍຫົວໜ້າ':'ເພີ່ມໂດຍຕົນເອງ'} · ຮັບຜິດຊອບ: ${escapeHtml(assigneeName(t.assignee))}</div></td>
+        <td>${escapeHtml(t.description)}</td>
+        <td><div class="statusrow">
+          ${STATUS_OPTIONS.map(s=>`<span class="radio ${t.status===s?'active':''}" style="color:${STATUS_COLOR[s]}" onclick="setTaskStatus('${t.id}','${s}')"><span class="dot"></span>${s}</span>`).join('')}
+        </div></td>
+      </tr>
+      ${taskExpandRow(t, 3)}`).join('');
+
+  document.getElementById('staffTabBody').innerHTML = `
+    <div class="board">
+      <div class="board-head">📋 ແຜນວຽກປະຈຳວັນ · DAILY WORK PLAN</div>
+      <div class="board-sub">
+        <span>📅 ວັນທີ: ${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}</span>
+        <span>🗓️ ວັນ: ${DOW_LABEL[d.getDay()]}</span>
+        ${currentTaskDept!=='all' ? '<span style="flex:1;min-width:160px">🎯 ເປົ້າໝາຍວັນນີ້: <input id="dailyGoal" value="'+escapeHtml(goal)+'" onchange="saveGoal(this.value)" style="width:auto;display:inline-block;padding:2px 6px;font-size:12px"></span>' : ''}
+      </div>
+      <table class="plan">
+        <thead><tr><th>ຫົວຂໍ້ງານ</th><th>ລາຍລະອຽດ</th><th>ສະຖານະ</th></tr></thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+    </div>
+    ${currentTaskDept!=='all' ? '<button onclick="showAddTaskForm()">+ ເພີ່ມຫົວຂໍ້</button><div id="addTaskForm"></div>' : ''}`;
+  restoreOpenExpand();
+}
+function restoreOpenExpand(){
+  if(!openExpandId) return;
+  const row = document.getElementById('expand-'+openExpandId);
+  const arrow = document.getElementById('arrow-'+openExpandId);
+  if(row){ row.style.display = 'table-row'; if(arrow) arrow.textContent = '▾'; }
+}
+
+function renderStaffAllTab(){
+  const list = MOCK_TASKS.filter(t=>currentTaskDept==='all' || t.department===currentTaskDept).slice().sort((a,b)=>a.dueDate.localeCompare(b.dueDate));
+  const showDeptCol = currentTaskDept==='all';
+  const colspan = showDeptCol ? 4 : 3;
+  const body = list.length===0 ? '<p style="color:var(--muted);text-align:center;padding:12px 0">ຍັງບໍ່ມີງານ</p>' : `<table class="plan" style="table-layout:fixed">
+    <thead><tr>${showDeptCol?'<th style="width:18%">ຝ່າຍ</th>':''}<th style="width:${showDeptCol?'30':'36'}%">ຫົວຂໍ້ງານ</th><th style="width:${showDeptCol?'16':'20'}%">ກຳນົດສົ່ງ</th><th style="width:${showDeptCol?'36':'44'}%">ສະຖານະ</th></tr></thead>
+    <tbody>${list.map(t=>`
+      <tr>
+        ${showDeptCol?'<td style="color:'+DEPT_COLOR[t.department]+';font-weight:600;font-size:11px">'+DEPT_LABEL[t.department]+'</td>':''}
+        <td><span class="arrow-btn" id="arrow-${t.id}" onclick="toggleTaskRow('${t.id}')">▸</span>${escapeHtml(t.title)}</td>
+        <td>${t.dueDate}</td>
+        <td><div class="statusrow">
+          ${STATUS_OPTIONS.map(s=>`<span class="radio ${t.status===s?'active':''}" style="color:${STATUS_COLOR[s]}" onclick="setTaskStatus('${t.id}','${s}')"><span class="dot"></span>${s}</span>`).join('')}
+        </div></td>
+      </tr>
+      ${taskExpandRow(t, colspan)}`).join('')}</tbody>
+  </table>`;
+  const label = currentTaskDept==='all' ? 'ທຸກຝ່າຍ' : DEPT_LABEL[currentTaskDept];
+  document.getElementById('staffTabBody').innerHTML = `<div style="font-size:12px;color:var(--muted);margin-bottom:8px">ງານທັງໝົດຂອງ${label} ຮຽງຕາມກຳນົດສົ່ງ</div>${body}`;
+  restoreOpenExpand();
+}
+
+function renderStaffWeekly(){
+  const [monStr, sunStr] = getWeekRange(viewingDate);
+  const list = MOCK_TASKS.filter(t=>(currentTaskDept==='all' || t.department===currentTaskDept) && t.dueDate>=monStr && t.dueDate<=sunStr)
+    .slice().sort((a,b)=>a.dueDate.localeCompare(b.dueDate));
+  const showDeptCol = currentTaskDept==='all';
+  const colspan = showDeptCol ? 4 : 3;
+  const body = list.length===0 ? '<p style="color:var(--muted);text-align:center;padding:12px 0">ບໍ່ມີວຽກໃນອາທິດນີ້</p>' : `<table class="plan" style="table-layout:fixed">
+    <thead><tr>${showDeptCol?'<th style="width:16%">ຝ່າຍ</th>':''}<th style="width:${showDeptCol?'16':'20'}%">ວັນ</th><th style="width:${showDeptCol?'32':'36'}%">ຫົວຂໍ້ງານ</th><th style="width:${showDeptCol?'36':'44'}%">ສະຖານະ</th></tr></thead>
+    <tbody>${list.map(t=>{
+      const dd = new Date(t.dueDate+'T00:00:00');
+      return `<tr>
+        ${showDeptCol?'<td style="color:'+DEPT_COLOR[t.department]+';font-weight:600;font-size:11px">'+DEPT_LABEL[t.department]+'</td>':''}
+        <td>${DOW_LABEL[dd.getDay()]}. ${dd.getDate()}/${dd.getMonth()+1}</td>
+        <td><span class="arrow-btn" id="arrow-${t.id}" onclick="toggleTaskRow('${t.id}')">▸</span>${escapeHtml(t.title)}</td>
+        <td><div class="statusrow">
+          ${STATUS_OPTIONS.map(s=>`<span class="radio ${t.status===s?'active':''}" style="color:${STATUS_COLOR[s]}" onclick="setTaskStatus('${t.id}','${s}')"><span class="dot"></span>${s}</span>`).join('')}
+        </div></td>
+      </tr>
+      ${taskExpandRow(t, colspan)}`;
+    }).join('')}</tbody>
+  </table>`;
+  document.getElementById('staffTabBody').innerHTML = `<div style="font-size:12px;color:var(--muted);margin-bottom:8px">ອາທິດວັນທີ ${monStr.split('-').reverse().join('/')} – ${sunStr.split('-').reverse().join('/')}</div>${body}`;
+  restoreOpenExpand();
+}
+
+function saveGoal(v){
+  MOCK_GOALS[currentTaskDept+'|'+viewingDate] = v;
+  persistGoal(currentTaskDept, viewingDate, v);
+}
+function assigneeName(username){
+  if(!username) return 'ยังบ่ทันมอบหมาย';
+  const a = ACCOUNTS.find(x=>x.username===username);
+  return a ? a.name : username;
+}
+function toggleTaskRow(id){
+  const row = document.getElementById('expand-'+id);
+  const arrow = document.getElementById('arrow-'+id);
+  const open = row.style.display === 'table-row';
+  row.style.display = open ? 'none' : 'table-row';
+  arrow.textContent = open ? '▸' : '▾';
+  openExpandId = open ? null : id;
+}
+function toggleEditForm(id){
+  const form = document.getElementById('editform-'+id);
+  form.style.display = (form.style.display==='block') ? 'none' : 'block';
+}
+function saveTaskEdit(id){
+  const t = MOCK_TASKS.find(x=>x.id===id);
+  const newTitle = document.getElementById('editTitle-'+id).value.trim();
+  const newDesc = document.getElementById('editDesc-'+id).value.trim();
+  if(!newTitle) return;
+  const changes = [];
+  if(newTitle !== t.title) changes.push('ປ່ຽນຫົວຂໍ້ຈາກ "'+t.title+'" ເປັນ "'+newTitle+'"');
+  if(newDesc !== t.description) changes.push('ປ່ຽນລາຍລະອຽດ');
+  if(changes.length > 0){
+    if(!t.editHistory) t.editHistory = [];
+    t.editHistory.push({author: session.name, at: new Date(), change: changes.join(' · ')});
+  }
+  t.title = newTitle;
+  t.description = newDesc;
+  persistTask(t);
+  refreshAllTaskViews();
+  reopenExpand(id);
+}
+function refreshAllTaskViews(){
+  if(activeTab==='orgchart'){ renderOrgChart(); showOrg(currentOrgId); }
+  else if(adminViewingTasks){ renderTaskSubTabs(); }
+  else { rerenderStaffTab(); }
+}
+function rerenderStaffTab(){
+  if(staffTab==='daily') renderStaffDaily();
+  else if(staffTab==='weekly') renderStaffWeekly();
+  else if(staffTab==='all') renderStaffAllTab();
+}
+function setTaskStatus(id, status){
+  const t = MOCK_TASKS.find(x=>x.id===id);
+  t.status = status;
+  persistTask(t);
+  rerenderStaffTab();
+}
+function reopenExpand(id){
+  openExpandId = id;
+  const row = document.getElementById('expand-'+id);
+  if(row) row.style.display = 'table-row';
+  const arrow = document.getElementById('arrow-'+id);
+  if(arrow) arrow.textContent = '▾';
+}
+function addTaskMessage(id){
+  const input = document.getElementById('chatinput-'+id);
+  const text = input.value.trim();
+  if(!text) return;
+  const t = MOCK_TASKS.find(x=>x.id===id);
+  t.updates.push({author: session.name, at: new Date(), text: text});
+  persistTask(t);
+  refreshAllTaskViews();
+  reopenExpand(id);
+  const chat = document.getElementById('chat-'+id);
+  if(chat) chat.scrollTop = chat.scrollHeight;
+}
+function toggleMsgEdit(taskId, idx){
+  const el = document.getElementById('msgedit-'+taskId+'-'+idx);
+  if(el) el.style.display = (el.style.display==='block') ? 'none' : 'block';
+}
+function saveMsgEdit(taskId, idx){
+  const t = MOCK_TASKS.find(x=>x.id===taskId);
+  const u = t.updates[idx];
+  const newText = document.getElementById('msgeditinput-'+taskId+'-'+idx).value.trim();
+  if(!newText || newText===u.text){
+    const el = document.getElementById('msgedit-'+taskId+'-'+idx);
+    if(el) el.style.display = 'none';
+    return;
+  }
+  if(!u.editHistory) u.editHistory = [];
+  u.editHistory.push({text: u.text, at: u.editedAt || u.at});
+  u.text = newText;
+  u.editedAt = new Date();
+  persistTask(t);
+  refreshAllTaskViews();
+  reopenExpand(taskId);
+}
+function toggleMsgHistory(taskId, idx){
+  const el = document.getElementById('msghist-'+taskId+'-'+idx);
+  if(el) el.style.display = (el.style.display==='block') ? 'none' : 'block';
+}
+
+function showAddTaskForm(){
+  document.getElementById('addTaskForm').innerHTML = `
+    <div style="border-top:0.5px solid var(--line);margin-top:12px;padding-top:12px">
+      <label>ຊື່ຫົວຂໍ້</label><input id="newTaskTitle">
+      <label>ລາຍລະອຽດ</label><input id="newTaskDesc">
+      <label>ກຳນົດວັນ</label><input type="date" id="newTaskDate" value="${viewingDate}">
+      <label>ຜູ້ຮັບຜິດຊອບ</label><select id="newTaskAssignee">${assigneeOptions(currentTaskDept)}</select>
+      <button onclick="addOwnTask()">ບັນທຶກຫົວຂໍ້</button>
+      <div class="err" id="newTaskMsg"></div>
+    </div>`;
+  if(session.role==='staff'){
+    const sel = document.getElementById('newTaskAssignee');
+    if(sel) sel.value = session.username;
+  }
+}
+function addOwnTask(){
+  const title = document.getElementById('newTaskTitle').value.trim();
+  const msgEl = document.getElementById('newTaskMsg');
+  if(!title){ msgEl.textContent = 'ປ້ອນຊື່ຫົວຂໍ້ກ່ອນ'; return; }
+  const isAdmin = session.role === 'admin';
+  const newTask = {
+    id: 't'+Date.now(),
+    department: currentTaskDept,
+    title: title,
+    description: document.getElementById('newTaskDesc').value.trim(),
+    dueDate: document.getElementById('newTaskDate').value || viewingDate,
+    status: isAdmin ? 'ยังບໍ່ເລີ່ມ' : 'ລໍຖ້າອະນຸມັດ', updates:[], editHistory:[],
+    assignee: document.getElementById('newTaskAssignee').value,
+    assignedBy: session.username, by: isAdmin ? 'ຫົວໜ້າ' : 'ພະນັກງານ'
+  };
+  MOCK_TASKS.unshift(newTask);
+  persistTask(newTask);
+  rerenderStaffTab();
+}
+
+function renderStaffCalendar(){
+  const year = calendarMonth.getFullYear();
+  const month = calendarMonth.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const startOffset = firstDay.getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const myTasks = MOCK_TASKS.filter(t=>currentTaskDept==='all' || t.department===currentTaskDept);
+
+  let cells = '';
+  for(let i=0;i<startOffset;i++) cells += '<div></div>';
+  for(let day=1; day<=daysInMonth; day++){
+    const dateStr = year+'-'+String(month+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+    const dayTasks = myTasks.filter(t=>t.dueDate===dateStr);
+    const isToday = dateStr === todayISO();
+    cells += `<div onclick="goToDate('${dateStr}')" style="border:0.5px solid var(--line);border-radius:6px;min-height:64px;padding:4px;cursor:pointer;${isToday?'background:var(--bg);border-color:var(--dot)':''}">
+      <div style="font-size:11px;color:var(--muted)">${day}</div>
+      ${dayTasks.slice(0,2).map(t=>'<div style="font-size:10px;background:'+(STATUS_COLOR[t.status]||'var(--muted)')+';color:#fff;border-radius:4px;padding:1px 4px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escapeHtml(t.title)+'</div>').join('')}
+      ${dayTasks.length>2 ? '<div style="font-size:10px;color:var(--muted)">+'+(dayTasks.length-2)+'</div>' : ''}
+    </div>`;
+  }
+
+  document.getElementById('staffTabBody').innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <button onclick="shiftMonth(-1)" style="margin:0;padding:8px 10px">‹</button>
+      <div style="font-weight:600">${MONTH_LABEL[month]} ${year}</div>
+      <button onclick="shiftMonth(1)" style="margin:0;padding:8px 10px">›</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;font-size:11px;color:var(--muted);text-align:center;margin-bottom:4px">
+      ${DOW_LABEL.map(d=>'<div>'+d+'</div>').join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">${cells}</div>`;
+}
+function shiftMonth(delta){
+  calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth()+delta, 1);
+  renderStaffCalendar();
+}
+
+(async function bootstrap(){
+  await ensureBootstrapAdmin();
+  const s = getSession();
+  if(!s){ renderLogin(); return; }
+  session = s;
+  activeTab = 'orgchart';
+  try{
+    await Promise.all([loadAllAccountsFromServer(), subscribeToTasks()]);
+    renderApp();
+  }catch(e){
+    clearSession();
+    renderLogin();
+  }
+})();
+</script>
+</body>
+</html>
