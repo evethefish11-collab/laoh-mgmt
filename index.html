@@ -106,8 +106,8 @@ const ORG_TREE = [
 ];
 let session = null;
 let activeTab = 'orgchart';
-const STATUS_OPTIONS = ['ยังບໍ່ເລີ່ມ','ກຳລັງເຮັດ','ລໍຖ້າອະນຸມັດ','ສຳເລັດ'];
-const STATUS_COLOR = {'ยังບໍ່ເລີ່ມ':'#6D6A5D','ກຳລັງເຮັດ':'#2F5D8C','ລໍຖ້າອະນຸມັດ':'#9C6B22','ສຳເລັດ':'#0F6E56'};
+const STATUS_OPTIONS = ['ຍັງບໍ່ເລີ່ມ','ກຳລັງເຮັດ','ລໍຖ້າອະນຸມັດ','ສຳເລັດ'];
+const STATUS_COLOR = {'ຍັງບໍ່ເລີ່ມ':'#6D6A5D','ກຳລັງເຮັດ':'#2F5D8C','ລໍຖ້າອະນຸມັດ':'#9C6B22','ສຳເລັດ':'#0F6E56'};
 const DEPT_COLOR = {tech:'#0F6E56', ops:'#4A4B8C', fin:'#854F0B', mkt:'#993C1D'};
 function todayISO(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 let viewingDate = todayISO();
@@ -372,7 +372,7 @@ function renderPendingTaskBlock(t){
     <div class="statusrow" style="flex-direction:row;flex-wrap:wrap;gap:8px;margin-top:10px">
       ${STATUS_OPTIONS.map(s=>`<span class="radio ${t.status===s?'active':''}" style="color:${STATUS_COLOR[s]}" onclick="orgSetTaskStatus('${t.id}','${s}')"><span class="dot"></span>${s}</span>`).join('')}
     </div>
-    <button onclick="orgSetTaskStatus('${t.id}','ยังບໍ່ເລີ່ມ')" style="margin-top:8px;background:#0F6E56;color:#fff;border-color:#0F6E56">✓ ອະນຸມັດ</button>
+    <button onclick="orgSetTaskStatus('${t.id}','ຍັງບໍ່ເລີ່ມ')" style="margin-top:8px;background:#0F6E56;color:#fff;border-color:#0F6E56">✓ ອະນຸມັດ</button>
   </div>`;
 }
 function orgAddTaskMessage(id){
@@ -535,7 +535,7 @@ function renderTaskSubTabs(){
 // ===== ແທັບ: ມອບໝາຍງານ (ແອດມິນ) =====
 function assigneeOptions(dept){
   const list = ACCOUNTS.filter(a=>a.department===dept);
-  if(list.length===0) return '<option value="">(ยังบ่มีพนักงานฝ่ายนี้)</option>';
+  if(list.length===0) return '<option value="">(ຍັງບໍ່ມີພະນັກງານຝ່າຍນີ້)</option>';
   return list.map(a=>`<option value="${a.username}">${escapeHtml(a.name)}</option>`).join('');
 }
 function updateTaskAssigneeOptions(){
@@ -565,7 +565,7 @@ function submitTask(){
     title: title,
     description: document.getElementById('taskDesc').value.trim(),
     dueDate: document.getElementById('taskDue').value || todayISO(),
-    status: 'ยังບໍ່ເລີ່ມ', updates:[], editHistory:[],
+    status: 'ຍັງບໍ່ເລີ່ມ', updates:[], editHistory:[],
     assignee: document.getElementById('taskAssignee').value,
     assignedBy: session.username, by:'ຫົວໜ້າ'
   };
@@ -578,16 +578,83 @@ function submitTask(){
   document.getElementById('taskDue').value='';
   loadTasksAdmin();
 }
+let adminTaskEditOpenId = null;
 function loadTasksAdmin(){
   const el = document.getElementById('taskListAdmin');
   if(MOCK_TASKS.length===0){ el.innerHTML = '<p style="color:var(--muted);text-align:center;padding:1rem 0">ຍັງບໍ່ມີງານທີ່ມອບໝາຍ</p>'; return; }
-  el.innerHTML = MOCK_TASKS.map(d=>`
+  el.innerHTML = MOCK_TASKS.map(d=>{
+    const open = adminTaskEditOpenId===d.id;
+    return `
     <div style="border-top:0.5px solid var(--line);padding:10px 0;font-size:13px">
-      <div style="color:var(--muted);font-size:12px;margin-bottom:3px">${DEPT_LABEL[d.department]} · <span style="color:${STATUS_COLOR[d.status]||'var(--muted)'}">${d.status}</span>${d.dueDate?' · ກຳນົດ '+d.dueDate:''}</div>
-      <strong>${escapeHtml(d.title)}</strong>
-      ${d.description ? '<div style="margin-top:2px">'+escapeHtml(d.description)+'</div>' : ''}
-      ${d.updates && d.updates.length>0 ? '<div style="color:var(--muted);margin-top:2px">ອັບເດດລ່າສຸດ: '+escapeHtml(d.updates[d.updates.length-1].text)+' ('+escapeHtml(d.updates[d.updates.length-1].author)+')</div>' : ''}
-    </div>`).join('');
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;cursor:pointer" onclick="toggleAdminTaskEdit('${d.id}')">
+        <div>
+          <div style="color:var(--muted);font-size:12px;margin-bottom:3px">${DEPT_LABEL[d.department]} · <span style="color:${STATUS_COLOR[d.status]||'var(--muted)'}">${d.status}</span>${d.dueDate?' · ກຳນົດ '+d.dueDate:''} · ຮັບຜິດຊອບ: ${escapeHtml(assigneeName(d.assignee))}</div>
+          <strong>${escapeHtml(d.title)}</strong>
+          ${d.description ? '<div style="margin-top:2px">'+escapeHtml(d.description)+'</div>' : ''}
+          ${d.updates && d.updates.length>0 ? '<div style="color:var(--muted);margin-top:2px">ອັບເດດລ່າສຸດ: '+escapeHtml(d.updates[d.updates.length-1].text)+' ('+escapeHtml(d.updates[d.updates.length-1].author)+')</div>' : ''}
+        </div>
+        <span style="font-size:11px;color:var(--dot);white-space:nowrap;margin-left:8px">${open?'▾ ປິດ':'✎ ແກ້ໄຂ'}</span>
+      </div>
+      ${open ? `
+      <div style="background:var(--bg);border-radius:8px;padding:10px;margin-top:10px">
+        <label style="margin-top:0">ຫົວຂໍ້ງານ</label><input id="admEditTitle-${d.id}" value="${escapeHtml(d.title)}">
+        <label>ລາຍລະອຽດ</label><input id="admEditDesc-${d.id}" value="${escapeHtml(d.description)}">
+        <label>ກຳນົດສົ່ງ</label><input type="date" id="admEditDue-${d.id}" value="${d.dueDate}">
+        <label>ຜູ້ຮັບຜິດຊອບ</label><select id="admEditAssignee-${d.id}">${assigneeOptions(d.department)}</select>
+        <label>ສະຖານະ</label>
+        <div class="statusrow" style="flex-direction:row;flex-wrap:wrap;gap:8px;margin-top:4px">
+          ${STATUS_OPTIONS.map(s=>`<span class="radio ${d.status===s?'active':''}" style="color:${STATUS_COLOR[s]}" onclick="setAdminEditStatus('${d.id}','${s}')" id="admstatus-${d.id}-${s}"><span class="dot"></span>${s}</span>`).join('')}
+        </div>
+        <button onclick="saveAdminTaskEdit('${d.id}')" style="margin-top:10px">ບັນທຶກການແກ້ໄຂ</button>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+  if(adminTaskEditOpenId){
+    const sel = document.getElementById('admEditAssignee-'+adminTaskEditOpenId);
+    if(sel){
+      const t = MOCK_TASKS.find(x=>x.id===adminTaskEditOpenId);
+      if(t) sel.value = t.assignee || '';
+    }
+  }
+}
+function toggleAdminTaskEdit(id){
+  adminTaskEditOpenId = (adminTaskEditOpenId===id) ? null : id;
+  loadTasksAdmin();
+}
+let pendingAdminStatus = {};
+function setAdminEditStatus(id, status){
+  pendingAdminStatus[id] = status;
+  STATUS_OPTIONS.forEach(s=>{
+    const chip = document.getElementById('admstatus-'+id+'-'+s);
+    if(chip) chip.classList.toggle('active', s===status);
+  });
+}
+function saveAdminTaskEdit(id){
+  const t = MOCK_TASKS.find(x=>x.id===id);
+  const newTitle = document.getElementById('admEditTitle-'+id).value.trim();
+  if(!newTitle) return;
+  const newDesc = document.getElementById('admEditDesc-'+id).value.trim();
+  const newDue = document.getElementById('admEditDue-'+id).value || t.dueDate;
+  const newAssignee = document.getElementById('admEditAssignee-'+id).value;
+  const newStatus = pendingAdminStatus[id] || t.status;
+  const changes = [];
+  if(newTitle !== t.title) changes.push('ປ່ຽນຫົວຂໍ້ຈາກ "'+t.title+'" ເປັນ "'+newTitle+'"');
+  if(newDesc !== t.description) changes.push('ປ່ຽນລາຍລະອຽດ');
+  if(newDue !== t.dueDate) changes.push('ປ່ຽນກຳນົດສົ່ງເປັນ '+newDue);
+  if(newAssignee !== t.assignee) changes.push('ປ່ຽນຜູ້ຮັບຜິດຊອບເປັນ '+assigneeName(newAssignee));
+  if(newStatus !== t.status) changes.push('ປ່ຽນສະຖານະເປັນ '+newStatus);
+  if(changes.length > 0){
+    if(!t.editHistory) t.editHistory = [];
+    t.editHistory.push({author: session.name, at: new Date(), change: changes.join(' · ')});
+  }
+  t.title = newTitle;
+  t.description = newDesc;
+  t.dueDate = newDue;
+  t.assignee = newAssignee;
+  t.status = newStatus;
+  persistTask(t);
+  delete pendingAdminStatus[id];
+  loadTasksAdmin();
 }
 
 // ===== ແທັບ: ເພີ່ມບັນຊີ (ແອດມິນ) =====
@@ -833,7 +900,7 @@ function saveGoal(v){
   persistGoal(currentTaskDept, viewingDate, v);
 }
 function assigneeName(username){
-  if(!username) return 'ยังบ่ทันมอบหมาย';
+  if(!username) return 'ຍັງບໍ່ທັນມອບໝາຍ';
   const a = ACCOUNTS.find(x=>x.username===username);
   return a ? a.name : username;
 }
@@ -954,7 +1021,7 @@ function addOwnTask(){
     title: title,
     description: document.getElementById('newTaskDesc').value.trim(),
     dueDate: document.getElementById('newTaskDate').value || viewingDate,
-    status: isAdmin ? 'ยังບໍ່ເລີ່ມ' : 'ລໍຖ້າອະນຸມັດ', updates:[], editHistory:[],
+    status: isAdmin ? 'ຍັງບໍ່ເລີ່ມ' : 'ລໍຖ້າອະນຸມັດ', updates:[], editHistory:[],
     assignee: document.getElementById('newTaskAssignee').value,
     assignedBy: session.username, by: isAdmin ? 'ຫົວໜ້າ' : 'ພະນັກງານ'
   };
