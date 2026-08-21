@@ -79,7 +79,7 @@ const db = firebase.firestore();
 
 let ACCOUNTS = [];
 const ROLE_LABEL = {admin:"ຜູ້ບໍລິຫານ", staff:"ພະນັກງານ"};
-const DEPT_LABEL = {tech:"ຝ່າຍເທັກໂນໂລຊີ", ops:"ຝ່າຍປະຕິບັດການ", fin:"ຝ່າຍການເງິນ", mkt:"ຝ່າຍການຕະຫຼາດ", all:"ທຸກຝ່າຍ"};
+const DEPT_LABEL = {tech:"ຝ່າຍເທັກໂນໂລຊີ", ops:"ຝ່າຍປະຕິບັດການ", fin:"ຝ່າຍການເງິນ", mkt:"ຝ່າຍການຕະຫຼາດ", graphic:"ຝ່າຍກຣາຟິກ", all:"ທຸກຝ່າຍ"};
 const ORG_DATA = {
 board:{eyebrow:"ບອດ",title:"ເຈົ້າຂອງບໍລິສັດ",role:"Eve + ຄູ່ຮ່ວມທຸລະກິດ",duties:["ກຳນົດທິດທາງທຸລະກິດໄລຍະຍາວ","ອະນຸມັດງົບລົງທຶນກ້ອນໃຫຍ່","ຮັບລາຍງານຜົນປະກອບການ"]},
 ceo:{eyebrow:"ຜູ້ບໍລິຫານສູງສຸດ",title:"CEO",role:"ຄຸ້ມຄອງຫົວໜ້າທຸກຝ່າຍ",duties:["ກຳນົດທິດທາງຄຸນສົມບັດ ແລະ ຍຸດທະສາດ","ຄຸ້ມງົບປະມານລວມ","ຈັດການວິກິດເມື່ອມີບັນຫາໃຫຍ່"]},
@@ -96,19 +96,22 @@ wd:{eyebrow:"ພະນັກງານ",title:"ກວດສອບການຖອ�
 mkt:{eyebrow:"ຫົວໜ້າຝ່າຍ",title:"ຝ່າຍການຕະຫຼາດ",role:"CMO",duties:["ວາງແຜນແຄມເປນລວມ","ຄຸ້ມຄອງຄຸນນະພາບເນື້ອຫາ"]},
 content:{eyebrow:"ພະນັກງານ",title:"Social / ເນື້ອຫາ",role:"ລາຍງານຕໍ່ CMO",duties:["ໂພສເນື້ອຫາຢ່າງໜ້ອຍ 1 ຊິ້ນຕໍ່ວັນ","ຕອບຄອມເມັນ"]},
 local:{eyebrow:"ພະນັກງານ",title:"ຜູ້ແປພາສາ",role:"ລາຍງານຕໍ່ CMO",duties:["ກວດຄຳແປ 3 ພາສາ","ຂຽນຄຳໂຄສະນາ"]},
-growth:{eyebrow:"ພະນັກງານ",title:"ຫາຮ້ານຄ້າໃໝ່",role:"ລາຍງານຕໍ່ CMO",duties:["ຫາຮ້ານຄ້າໃໝ່","ຕິດຕໍ່ຮ້ານຄ້າເປົ້າໝາຍ"]}
+growth:{eyebrow:"ພະນັກງານ",title:"ຫາຮ້ານຄ້າໃໝ່",role:"ລາຍງານຕໍ່ CMO",duties:["ຫາຮ້ານຄ້າໃໝ່","ຕິດຕໍ່ຮ້ານຄ້າເປົ້າໝາຍ"]},
+graphic:{eyebrow:"ຫົວໜ້າຝ່າຍ",title:"ຝ່າຍກຣາຟິກ",role:"Graphic Lead",duties:["ອອກແບບກຣາຟິກໂພສ/ໂປຣໂມຊັນທັງໝົດ","ຄຸ້ມຄອງຄວາມສອດຄ່ອງຂອງແບຣນ (Brand Identity)","ຮ່ວມມືກັບຝ່າຍການຕະຫຼາດຜະລິດຄອນເທັນ"]},
+designer:{eyebrow:"ພະນັກງານ",title:"ນັກອອກແບບກຣາຟິກ",role:"ລາຍງານຕໍ່ຫົວໜ້າຝ່າຍກຣາຟິກ",duties:["ອອກແບບໂພສ/ຄອນເທັນຕາມທີ່ໄດ້ຮັບມອບໝາຍ","ຮັກສາຄວາມສອດຄ່ອງຂອງແບຣນໃນທຸກຊິ້ນງານ"]}
 };
 const ORG_TREE = [
   {head:'tech', staff:['dev','qa']},
   {head:'ops', staff:['cs','vendor','rider']},
   {head:'fin', staff:['acct','wd']},
-  {head:'mkt', staff:['content','growth','local']}
+  {head:'mkt', staff:['content','growth','local']},
+  {head:'graphic', staff:['designer']}
 ];
 let session = null;
 let activeTab = 'orgchart';
 const STATUS_OPTIONS = ['ຍັງບໍ່ເລີ່ມ','ກຳລັງເຮັດ','ລໍຖ້າອະນຸມັດ','ສຳເລັດ'];
 const STATUS_COLOR = {'ຍັງບໍ່ເລີ່ມ':'#6D6A5D','ກຳລັງເຮັດ':'#2F5D8C','ລໍຖ້າອະນຸມັດ':'#9C6B22','ສຳເລັດ':'#0F6E56'};
-const DEPT_COLOR = {tech:'#0F6E56', ops:'#4A4B8C', fin:'#854F0B', mkt:'#993C1D'};
+const DEPT_COLOR = {tech:'#0F6E56', ops:'#4A4B8C', fin:'#854F0B', mkt:'#993C1D', graphic:'#6B4E9C'};
 function todayISO(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 let viewingDate = todayISO();
 let calendarMonth = new Date();
